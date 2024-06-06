@@ -1,29 +1,32 @@
-FROM rustlang/rust:nightly-bookworm-slim
+# Use a base image with Node.js 20 and Rust
+FROM node:20-slim as node
+FROM rust:1.67 as rust
 
-RUN set -eux; \
-    apt-get update; \
-    apt-get install -y --no-install-recommends \
-        build-essential \
-        libclang-dev \
-        libssl-dev \
-        pkg-config
+# Install Protobuf compiler
+RUN apt-get update && apt-get install -y protobuf-compiler
 
-COPY ./src ./src
-COPY Cargo.toml Cargo.toml
-COPY Cargo.lock Cargo.lock
+# Create a working directory
+WORKDIR /app
 
+# Copy the package.json and package-lock.json files
+COPY services/package*.json ./
+
+# Install Node.js dependencies
+RUN npm ci
+
+# Copy the source code
+COPY services/ .
+
+# Build the Rust project
+COPY . .
 RUN cargo build --release
 
-FROM debian:bookworm-slim
+# Set the environment variables
+ENV PORT=5000
+ENV VERIFY_SERVICE='cd ../ && cargo run -- reconstruct l1 --http-url https://rpc-amoy.polygon.technology/ --da-url https://rpc-amoy.polygon.technology/'
 
-RUN set -eux; \
-    apt-get update; \
-    apt-get install -y --no-install-recommends \
-        ca-certificates \
-        openssl
+# Expose the port
+EXPOSE $PORT
 
-COPY --from=0 ./target/release/state-reconstruct /state-reconstruct
-COPY IZkSync.json IZkSync.json
-COPY InitialState.csv InitialState.csv
-
-CMD ["/state-reconstruct", "reconstruct", "l1", "--http-url", "https://eth.llamarpc.com"]
+# Start the Node.js server
+CMD ["npm", "run", "dev"]
