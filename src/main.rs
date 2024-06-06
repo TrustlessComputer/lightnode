@@ -62,6 +62,12 @@ fn start_logger(default_level: LevelFilter) {
 async fn main() -> Result<()> {
     start_logger(LevelFilter::INFO); //
 
+    // check db-status folder exists or not, if not, create a new one
+    let path = Path::new("./db-status");
+    if !path.exists() {
+        std::fs::create_dir(path).unwrap();
+    }
+
     let cli = Cli::parse();
     
     match cli.subcommand {
