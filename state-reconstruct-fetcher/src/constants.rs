@@ -17,9 +17,9 @@ pub mod ethereum {
     /// Default Ethereum blob storage URL base.
     pub const BLOBS_URL: &str = "http://localhost:8555";
 
-    pub const DA_URL: &str = "...";
+    pub const DA_URL: &str = "https://rpc-amoy.polygon.technology/";
 
-    pub const HTTP_URL: &str = "...";
+    pub const HTTP_URL: &str = "https://rpc-amoy.polygon.technology/";
 
     pub const NUM_CONFIRMATIONS: u64 = 1;
 
@@ -46,7 +46,7 @@ pub mod btc {
 
     pub const SIGNATURE_LENGTH: usize = 65;
 
-    pub const CHECKPOINT_BLOCK_NUMBERS: [u64; 132] = 
+    pub const CHECKPOINT_BLOCK_NUMBERS: [u64; 0] = 
     [];
 }
 
