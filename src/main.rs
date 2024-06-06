@@ -64,6 +64,12 @@ async fn main() -> Result<()> {
 
     let cli = Cli::parse();
 
+    // check db-status folder exists or not, if not, create a new one
+    let path = Path::new("./db-status");
+    if !path.exists() {
+        fs::create_dir(path).unwrap();
+    }
+    
     match cli.subcommand {
         Command::Reconstruct {
             source,
