@@ -25,8 +25,12 @@ RUN cargo build --release
 ENV PORT=5000
 ENV VERIFY_SERVICE='cd ../ && cargo run -- reconstruct l1 --http-url https://rpc-amoy.polygon.technology/ --da-url https://rpc-amoy.polygon.technology/'
 
+# Set the ulimit for open files
+RUN ulimit -n 8192
+
 # Expose the port
 EXPOSE $PORT
 
 # Start the Node.js server
+WORKDIR /app/services 
 CMD ["npm", "run", "dev"]
