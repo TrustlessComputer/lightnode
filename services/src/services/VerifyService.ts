@@ -31,5 +31,5 @@ export const startVerifyService = (cmd: string) => {
   runCommand();
 
   // Schedule the command to run every 10 minutes
-  setInterval(runCommand, 60000);
+  setInterval(runCommand, 300000);
 };
