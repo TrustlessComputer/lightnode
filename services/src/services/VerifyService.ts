@@ -13,10 +13,6 @@ export const startVerifyService = (cmd: string) => {
         console.error(`Error executing command: ${error.message}`);
         return;
       }
-      if (stderr) {
-        console.error(`Command stderr: ${stderr}`);
-        return;
-      }
       console.log(`Command stdout: ${stdout}`);
     });
   };
