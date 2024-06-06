@@ -20,3 +20,4 @@ StateSnapshot.json
 
 # Node.js
 node_modules/
+dist/
