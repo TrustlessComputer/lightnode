@@ -16,11 +16,12 @@ bincode = "1"
 blake2 = "0.10.6"
 chrono = "0.4.31"
 clap = { version = "4.4.7", features = ["derive", "env"] }
-ethers = "1.0.2"
+ethers = "2.0.14"
 eyre = "0.6.8"
 hex = "0.4.3"
 indexmap = { version = "2.0.2" }
 primitive-types = "0.12.2"
+protobuf = "3.4.0"
 regex = "1.10.4"
 rocksdb = "0.21"
 serde = { version = "1.0.189", features = ["derive"] }
