@@ -1,5 +1,5 @@
-# zkSync State Reconstruction Tool
-> Tool / Library to reconstruct zkSync state from commit blocks published on L1
+# Supersonic State Reconstruction Tool
+> Tool / Library to reconstruct Supersonic state from commit blocks published on L1
 
 ## Prerequisites & setup
 Currently there are three ways to setup the environment: using the provided Nix flake, the container image, or installing the dependencies manually.
@@ -96,7 +96,7 @@ To view all available options, you can use the `help` command:
 ```fish
 cargo run -- --help
 
-zkSync state reconstruction tool
+Supersonic state reconstruction tool
 
 Usage: state-reconstruct <COMMAND>
 
@@ -125,6 +125,6 @@ Commands:
   help  Print this message or the help of the given subcommand(s)
 
 Options:
-  -d, --db-path <DB_PATH>  The path to the storage solution [env: ZK_SYNC_DB_PATH=]
+  -d, --db-path <DB_PATH>  The path to the storage solution [env: DB_PATH=]
   -h, --help               Print help
 ```
