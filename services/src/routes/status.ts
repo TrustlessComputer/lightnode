@@ -58,8 +58,8 @@ router.get('/status/:page/:per_page', (req: Request, res: Response) => {
     // pagination request based on query params page and per_page
     // clone the status and sort by base_batch_number desc
     const statuses = statusCache.statuses.slice().sort((a, b) => b.base_batch_number - a.base_batch_number);
-    const page = Math.max(1, parseInt(req.query.page as string) || 1);
-    const per_page = Math.max(10, parseInt(req.query.per_page as string) || 10);
+    const page = Math.max(1, parseInt(req.params.page as string) || 1);
+    const per_page = Math.max(10, parseInt(req.params.per_page as string) || 10);
     
     const total = statuses.length;
     const total_pages = Math.ceil(total/per_page);
