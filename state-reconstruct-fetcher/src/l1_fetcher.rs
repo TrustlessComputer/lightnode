@@ -361,6 +361,7 @@ impl L1Fetcher {
                             let chunks: Vec<Vec<u8>> =
                                 content.chunks(523).map(|c| c.to_vec()).collect();
                             // manually collect the chunks into a Vec<u8>
+                        
                             let mut result = Vec::new();
                             for i in 0..chunks.len() {
                                 if i == chunks.len() - 1 {
@@ -371,7 +372,13 @@ impl L1Fetcher {
                                     // pad 2 bytes at the end
                                     let c = chunks[i].clone();
                                     result.extend(&c[..c.len() - 3].to_vec());
-                                    result.extend(&c[c.len() - 2..].to_vec());
+                                    let d = chunks[i].clone();
+                                    let last_two_bytes = &d[d.len() - 2..];
+                                    if last_two_bytes != [0x0E, 0x01] {
+                                        // Add the last 2 bytes if they are not equal to 0x0E01
+                                        result.extend(&d[d.len() - 2..].to_vec());
+                                    }
+                                    
                                 } else {
                                     let c = chunks[i].clone();
                                     result.extend(&c[..c.len() - 3].to_vec());
@@ -386,14 +393,25 @@ impl L1Fetcher {
                             let msg_hash = bitcoin::sign_message::signed_msg_hash(&signed_msg);
                             let sig = bitcoin::sign_message::MessageSignature::from_slice(&rawsig).unwrap();
                             let secp = secp256k1::Secp256k1::new();
+                            tracing::info!("DEBUG Message hash {:?} btcAddr {:?} sig {:?}", hex::encode(msg_hash), BTC_SIGNER_ADDR, hex::encode(rawsig));
                             let signature_valid = match sig.is_signed_by_address(&secp, &bitcoin::Address::from_str(BTC_SIGNER_ADDR).unwrap().assume_checked(), msg_hash) {
                                 Ok(res) => res,
                                 Err(e) => {
+                                    tracing::error!("signature error: {e}");
                                     false
                                 },
                             };
+
+                            
                             
                             if !signature_valid {
+                                let content = &content[1 + SIGNATURE_LENGTH..];
+                                let commit_data = &content[..1636];
+                                let prove_data = &content[1636..3784];
+                                let execute_data = &content[3784..content.len()];
+                                tracing::debug!("commit: {:?}", hex::encode(commit_data));
+                                tracing::debug!("prove data: {:?}", hex::encode(prove_data));
+                                tracing::debug!("execute: {:?}", hex::encode(execute_data));
                                 tracing::warn!("invalid signature, skipping");
                                 continue;
                             } else {
