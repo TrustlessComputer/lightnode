@@ -6,3 +6,4 @@ pub mod constants;
 pub mod l1_fetcher;
 pub mod metrics;
 pub mod types;
+pub mod decode;
