@@ -60,7 +60,7 @@ fn start_logger(default_level: LevelFilter) {
 #[tokio::main]
 #[allow(clippy::too_many_lines)]
 async fn main() -> Result<()> {
-    start_logger(LevelFilter::INFO); //
+    start_logger(LevelFilter::DEBUG); //
 
     // check db-status folder exists or not, if not, create a new one
     let path = Path::new("./db-status");

@@ -3,13 +3,13 @@ pub mod ethereum {
     pub const BLOCK_STEP: u64 = 50;
 
     /// Block number in Ethereum for zkSync genesis block.
-    pub const GENESIS_BLOCK: u64 = 1474000;
+    pub const GENESIS_BLOCK: u64 = 1474940;
 
     /// Block number in Ethereum of the first Boojum-formatted block.
-    pub const BOOJUM_BLOCK: u64 = 1474000;
+    pub const BOOJUM_BLOCK: u64 = 1474940;
 
     /// Block number in Ethereum of the first block storing pubdata within blobs.
-    pub const BLOB_BLOCK: u64 = 1474000;
+    pub const BLOB_BLOCK: u64 = 1474940;
 
     /// zkSync smart contract address.
     pub const ZK_SYNC_ADDR: &str = "0xD379CD1D5B25C861fAA5803a12ad7008c455fE37";
@@ -46,7 +46,7 @@ pub mod btc {
 
     pub const SIGNATURE_LENGTH: usize = 65;
 
-    pub const CHECKPOINT_BLOCK_NUMBERS: [u64; 0] = []; 
+    pub const CHECKPOINT_BLOCK_NUMBERS: [u64; 1] = [1474944]; 
 }
 
 pub mod storage {

@@ -346,12 +346,12 @@ impl L1Fetcher {
                             }
 
                             let content = &witness.to_vec()[1];
-                            if content.len() < 71 {
+                            if content.len() < 70 {
                                 tracing::debug!("block height {} witness content length not matched, skipping", current_block_height);
                                 continue;
                             }
 
-                            let content = &content[67..content.len() - 1];
+                            let content = &content[66..content.len() - 1];
                             let buf = content.to_vec();
                             let content;
                             match decode_flatten(buf) {
@@ -361,6 +361,19 @@ impl L1Fetcher {
                                     continue;
                                 }
                             }
+
+                            let mut index = 0;
+                            for i in 0..content.len() {
+                                if content[i] == 0 && content[i + 1] == 0 && content[i + 2] == 0 && content[i + 3] == 0 && content[i + 4] == 0 && content[i + 5] == 0 && content[i + 6] == 0 && content[i + 7] == 0 && content[i + 8] == 8 {
+                                    index = i+8;
+                                    break;
+                                }
+                            }
+                            let content = &content[index..];
+                            
+                            let content1 = content.clone();
+                            tracing::debug!("content {:?}", hex::encode(content1));
+
                             // filter by id
                             let first_byte = content[0];
                             if first_byte != 8 {
@@ -383,8 +396,6 @@ impl L1Fetcher {
                                 },
                             };
 
-                            
-                            
                             if !signature_valid {
                                 let content = &content[1 + SIGNATURE_LENGTH..];
                                 let commit_data = &content[..1636];
@@ -393,7 +404,7 @@ impl L1Fetcher {
                                 tracing::debug!("commit: {:?}", hex::encode(commit_data));
                                 tracing::debug!("prove data: {:?}", hex::encode(prove_data));
                                 tracing::debug!("execute: {:?}", hex::encode(execute_data));
-                                tracing::warn!("invalid signature, skipping");
+                                tracing::debug!("invalid signature, skipping");
                                 continue;
                             } else {
                                 tracing::info!("signature valid");
