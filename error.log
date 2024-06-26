@@ -1,0 +1,141 @@
+warning: unused import: `BTC_START_BLOCK_HEIGHT`
+  --> state-reconstruct-fetcher/src/l1_fetcher.rs:22:114
+   |
+22 |         VERIFY_HELPER_ADDR, ZK_SYNC_ADDR, BTC_RPC_ENDPOINT, BTC_SIGNER_ADDR, BTC_RPC_USERNAME, BTC_RPC_PASSWORD, BTC_START_BLOCK_HEIGHT,
+   |                                                                                                                  ^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` on by default
+
+warning: unused variable: `client`
+   --> state-reconstruct-fetcher/src/l1_fetcher.rs:908:5
+    |
+908 |     client: &BlobHttpClient,
+    |     ^^^^^^ help: if this is intentional, prefix it with an underscore: `_client`
+    |
+    = note: `#[warn(unused_variables)]` on by default
+
+warning: unused variable: `dap`
+   --> state-reconstruct-fetcher/src/l1_fetcher.rs:909:5
+    |
+909 |     dap: &Provider<Http>,
+    |     ^^^ help: if this is intentional, prefix it with an underscore: `_dap`
+
+warning: unused variable: `l1_block_number`
+    --> state-reconstruct-fetcher/src/l1_fetcher.rs:1034:5
+     |
+1034 |     l1_block_number: u64,
+     |     ^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_l1_block_number`
+
+warning: unused variable: `d1`
+    --> state-reconstruct-fetcher/src/l1_fetcher.rs:1101:13
+     |
+1101 |         let d1 = &data[i];
+     |             ^^ help: if this is intentional, prefix it with an underscore: `_d1`
+
+warning: unused variable: `metrics`
+   --> state-reconstruct-fetcher/src/l1_fetcher.rs:281:13
+    |
+281 |         let metrics = self.metrics.clone();
+    |             ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_metrics`
+
+warning: unused variable: `event`
+   --> state-reconstruct-fetcher/src/l1_fetcher.rs:282:13
+    |
+282 |         let event = self.contracts.v1.events_by_name("BlockCommit")?[0].clone();
+    |             ^^^^^ help: if this is intentional, prefix it with an underscore: `_event`
+
+warning: unused variable: `provider_clone`
+   --> state-reconstruct-fetcher/src/l1_fetcher.rs:283:13
+    |
+283 |         let provider_clone = self.provider.clone();
+    |             ^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_provider_clone`
+
+warning: unused variable: `block_step`
+   --> state-reconstruct-fetcher/src/l1_fetcher.rs:284:13
+    |
+284 |         let block_step = self.config.block_step;
+    |             ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_block_step`
+
+warning: unused variable: `disable_polling`
+   --> state-reconstruct-fetcher/src/l1_fetcher.rs:275:9
+    |
+275 |         disable_polling: bool,
+    |         ^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_disable_polling`
+
+warning: variable does not need to be mutable
+   --> state-reconstruct-fetcher/src/l1_fetcher.rs:273:9
+    |
+273 |         mut current_l1_block_number: U64,
+    |         ----^^^^^^^^^^^^^^^^^^^^^^^
+    |         |
+    |         help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` on by default
+
+warning: constant `MAX_RETRIES` is never used
+  --> state-reconstruct-fetcher/src/l1_fetcher.rs:30:7
+   |
+30 | const MAX_RETRIES: u8 = 5;
+   |       ^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` on by default
+
+warning: constant `FAILED_FETCH_RETRY_INTERVAL_S` is never used
+  --> state-reconstruct-fetcher/src/l1_fetcher.rs:32:7
+   |
+32 | const FAILED_FETCH_RETRY_INTERVAL_S: u64 = 10;
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: associated items `spawn_main_handler`, `spawn_tx_handler`, `spawn_parsing_handler`, and `retry_call` are never used
+   --> state-reconstruct-fetcher/src/l1_fetcher.rs:414:8
+    |
+112 | impl L1Fetcher {
+    | -------------- associated items in this implementation
+...
+414 |     fn spawn_main_handler(
+    |        ^^^^^^^^^^^^^^^^^^
+...
+588 |     fn spawn_tx_handler(
+    |        ^^^^^^^^^^^^^^^^
+...
+796 |     fn spawn_parsing_handler(
+    |        ^^^^^^^^^^^^^^^^^^^^^
+...
+888 |     async fn retry_call<T, Fut>(callback: impl Fn() -> Fut, err: L1FetchError) -> Result<T>
+    |              ^^^^^^^^^^
+
+warning: `state-reconstruct-fetcher` (lib) generated 14 warnings (run `cargo fix --lib -p state-reconstruct-fetcher` to apply 11 suggestions)
+warning: variant `BlockMismatch` is never constructed
+  --> src/processor/tree/tree_wrapper.rs:27:5
+   |
+25 | pub enum TreeError {
+   |          --------- variant in this enum
+26 |     #[error("block mismatch")]
+27 |     BlockMismatch,
+   |     ^^^^^^^^^^^^^
+   |
+   = note: `TreeError` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+   = note: `#[warn(dead_code)]` on by default
+
+warning: function `reconstruct_genesis_state` is never used
+   --> src/processor/tree/tree_wrapper.rs:233:4
+    |
+233 | fn reconstruct_genesis_state<D: Database>(
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `derive_final_address_for_params` is never used
+   --> src/processor/tree/tree_wrapper.rs:373:4
+    |
+373 | fn derive_final_address_for_params(address: &Address, key: &U256) -> [u8; 32] {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: `state-reconstruct` (bin "state-reconstruct") generated 3 warnings
+    Finished dev [unoptimized + debuginfo] target(s) in 1.29s
+     Running `target/debug/state-reconstruct reconstruct l1 --http-url 'https://rpc-amoy.polygon.technology/' --da-url 'https://rpc-amoy.polygon.technology/'`
+thread 'tokio-runtime-worker' panicked at state-reconstruct-fetcher/src/l1_fetcher.rs:315:73:
+called `Result::unwrap()` on an `Err` value: JsonRpc(Json(Error("Resource temporarily unavailable (os error 35)", line: 1, column: 1118)))
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+Error: task 15 panicked
+
+Location:
+    /Users/hieutran/Code/BVM/zksync-state-reconstruct-fork/state-reconstruct-fetcher/src/l1_fetcher.rs:236:45

@@ -1,29 +1,21 @@
-FROM rustlang/rust:nightly-bookworm-slim
+# Use a base image with Node.js 20 and Rust
+FROM node:20-bookworm as node
+WORKDIR /app
+COPY . .
 
-RUN set -eux; \
-    apt-get update; \
-    apt-get install -y --no-install-recommends \
-        build-essential \
-        libclang-dev \
-        libssl-dev \
-        pkg-config
+RUN cd services && npm ci
 
-COPY ./src ./src
-COPY Cargo.toml Cargo.toml
-COPY Cargo.lock Cargo.lock
+# Install Protobuf compiler  
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates protobuf-compiler
+RUN update-ca-certificates
+RUN cd services && npm run build
 
-RUN cargo build --release
+# Set the ulimit for open files
+RUN ulimit -n 8192
 
-FROM debian:bookworm-slim
+# Expose the port
+EXPOSE 5000
 
-RUN set -eux; \
-    apt-get update; \
-    apt-get install -y --no-install-recommends \
-        ca-certificates \
-        openssl
-
-COPY --from=0 ./target/release/state-reconstruct /state-reconstruct
-COPY IZkSync.json IZkSync.json
-COPY InitialState.csv InitialState.csv
-
-CMD ["/state-reconstruct", "reconstruct", "l1", "--http-url", "https://eth.llamarpc.com"]
+# Start the Node.js server
+WORKDIR /app/services
+CMD ["npm", "run", "prod"]
