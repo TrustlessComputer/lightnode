@@ -28,6 +28,7 @@ use crate::{
     },
     metrics::L1Metrics,
     types::{CommitBlock, ParseError, Status},
+    decode::decode_flatten,
 };
 use bitcoincore_rpc::{bitcoin::{self, secp256k1}, Auth, Client, RpcApi};
 
@@ -350,42 +351,22 @@ impl L1Fetcher {
                                 continue;
                             }
 
-                            // remove the first 70 bytes & last 1 byte
-                            let content = &content[70..content.len() - 1];
+                            let content = &content[67..content.len() - 1];
+                            let buf = content.to_vec();
+                            let content;
+                            match decode_flatten(buf) {
+                                Some(c) => content = c,
+                                None => {
+                                    tracing::debug!("witness encoding format does not match, skipping");
+                                    continue;
+                                }
+                            }
                             // filter by id
                             let first_byte = content[0];
                             if first_byte != 8 {
                                 tracing::debug!("witness type does not match, skipping");
                                 continue;
                             }
-                            let chunks: Vec<Vec<u8>> =
-                                content.chunks(523).map(|c| c.to_vec()).collect();
-                            // manually collect the chunks into a Vec<u8>
-                        
-                            let mut result = Vec::new();
-                            for i in 0..chunks.len() {
-                                if i == chunks.len() - 1 {
-                                    // pad 3 bytes at the end
-                                    let c = chunks[i].clone();
-                                    result.extend(c.clone());
-                                } else if i == chunks.len() - 2 {
-                                    // pad 2 bytes at the end
-                                    let c = chunks[i].clone();
-                                    result.extend(&c[..c.len() - 3].to_vec());
-                                    let d = chunks[i].clone();
-                                    let last_two_bytes = &d[d.len() - 2..];
-                                    if last_two_bytes != [0x0E, 0x01] {
-                                        // Add the last 2 bytes if they are not equal to 0x0E01
-                                        result.extend(&d[d.len() - 2..].to_vec());
-                                    }
-                                    
-                                } else {
-                                    let c = chunks[i].clone();
-                                    result.extend(&c[..c.len() - 3].to_vec());
-                                }
-                            }
-
-                            let content = result;
 
                             // check signature
                             let rawsig = &content[1..1 + SIGNATURE_LENGTH];
