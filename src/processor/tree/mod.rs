@@ -100,9 +100,9 @@ impl Processor for TreeProcessor {
             // set filename is batch_number
             let file_path = format!("./db-status/{}.json", block.l2_block_number);
             let file_path_str = &file_path;
-            tracing::info!("DEBUG File path in check state diff {:?}", file_path_str);
+            tracing::debug!("DEBUG File path in check state diff {:?}", file_path_str);
             // log filename
-            tracing::info!("write to file: {}", file_path);
+            tracing::debug!("write to file: {}", file_path);
             let mut status = match Status::read_from_file(file_path_str) {
                 Ok(status) => status,
                 Err(_) => {
@@ -119,7 +119,7 @@ impl Processor for TreeProcessor {
             
             match status.write_to_file(file_path_str) {
                 Ok(_) => {
-                    tracing::info!("write to file success");
+                    tracing::debug!("write to file success");
                 },
                 Err(_) => {
                     tracing::error!("cannot write to file");

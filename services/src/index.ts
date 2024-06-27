@@ -27,6 +27,5 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 // Start the server
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
-  const cmd = process.env.VERIFY_SERVICE;
-  startVerifyService(cmd!);
+  startVerifyService();
 });

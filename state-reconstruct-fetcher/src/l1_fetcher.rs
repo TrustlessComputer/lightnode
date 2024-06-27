@@ -387,7 +387,7 @@ impl L1Fetcher {
                             let msg_hash = bitcoin::sign_message::signed_msg_hash(&signed_msg);
                             let sig = bitcoin::sign_message::MessageSignature::from_slice(&rawsig).unwrap();
                             let secp = secp256k1::Secp256k1::new();
-                            tracing::info!("DEBUG Message hash {:?} btcAddr {:?} sig {:?}", hex::encode(msg_hash), BTC_SIGNER_ADDR, hex::encode(rawsig));
+                            tracing::info!("Message hash {:?} with signature {:?}", hex::encode(msg_hash), hex::encode(rawsig));
                             let signature_valid = match sig.is_signed_by_address(&secp, &bitcoin::Address::from_str(BTC_SIGNER_ADDR).unwrap().assume_checked(), msg_hash) {
                                 Ok(res) => res,
                                 Err(e) => {
@@ -406,9 +406,8 @@ impl L1Fetcher {
                                 tracing::debug!("execute: {:?}", hex::encode(execute_data));
                                 tracing::debug!("invalid signature, skipping");
                                 continue;
-                            } else {
-                                tracing::info!("signature valid");
-                            }
+                            } 
+
                             let content = &content[1 + SIGNATURE_LENGTH..];
 
                             if let Err(e) = raw_block_tx.send(FullBlock {
@@ -426,7 +425,7 @@ impl L1Fetcher {
                                 return current_block_height;
                             } else {
                                 batch_count += 1;
-                                tracing::info!("block #{}, batch #{} tx rawdata sent", current_block_height, batch_count);
+                                tracing::debug!("block #{}, batch #{} tx rawdata sent", current_block_height, batch_count);
                             }
                         }
                     }
@@ -541,7 +540,7 @@ impl L1Fetcher {
                             if new_l2_block_number <= latest_l2_block_number {
                                 continue;
                             }
-                            tracing::info!("log.transaction_hash {:?}", log.transaction_hash);
+                            tracing::debug!("log.transaction_hash {:?}", log.transaction_hash);
 
                             if let Some(tx_hash) = log.transaction_hash {
                                 if let Some(prev_hash) = previous_hash {
@@ -691,7 +690,7 @@ impl L1Fetcher {
             async move {
                 let commit_fn = contracts.v2.functions_by_name("commitBatches").unwrap()[0].clone();
                 let mut last_block_number_processed = None;
-                tracing::info!("waiting for raw tx data");
+                tracing::debug!("waiting for raw tx data");
 
                 while let Some(FullBlock { raw_data: content, block_number , txid}) = raw_block_rx.recv().await {
                     if cancellation_token.is_cancelled() {
@@ -730,7 +729,7 @@ impl L1Fetcher {
                         cancellation_token.cancel();
                         return last_block_number_processed;
                     }
-                    tracing::info!("verify proof succeeded");
+                    tracing::info!("Verify proof succeeded!!!");
 
                     let blocks = loop {
                         match parse_calldata(block_number, &commit_fn, commit_data, &client, &dap).await {
@@ -770,13 +769,12 @@ impl L1Fetcher {
 
                             return last_block_number_processed;
                         } else {
-                            tracing::info!("commit block sent");
-                            tracing::info!("DEBUG Base Block number {:?}", metrics.latest_l2_block_num);
-                            tracing::info!("DEBUG Bitcoin txid {:?}", txid);
+                            tracing::debug!("commit block sent");
+                            tracing::debug!("DEBUG Base Block number {:?}", metrics.latest_l2_block_num);
+                            tracing::debug!("DEBUG Bitcoin txid {:?}", txid);
                             
                             let da_txhash = match get_da_txhash(&commit_fn, commit_data).await {
                                 Ok(da_txhash) => {
-                                    tracing::info!("DEBUG DA txid {:?}", da_txhash);
                                     da_txhash
                                 },
                                 Err(e) => {
@@ -798,11 +796,10 @@ impl L1Fetcher {
                             {
                                 let file_path = format!("./db-status/{}.json", metrics.latest_l2_block_num);
                                 let file_path_str = &file_path;
-                                tracing::info!("DEBUG File path {:?}", file_path_str);
                                 let write_status = status.write_to_file(file_path_str).unwrap();
                             
                                 if write_status {
-                                    tracing::info!("DEBUG Status file written");
+                                    tracing::debug!("Status file written");
                                 } else {
                                     tracing::error!("Cannot write status file");
                                     cancellation_token.cancel();

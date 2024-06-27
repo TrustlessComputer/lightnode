@@ -38,13 +38,14 @@ use crate::{
 
 #[global_allocator]
 static GLOBAL: Jemalloc = Jemalloc;
-
-fn start_logger(default_level: LevelFilter) {
+fn start_logger(default_level: tracing_subscriber::filter::LevelFilter) {
     let filter = match EnvFilter::try_from_default_env() {
         Ok(filter) => filter
             .add_directive("hyper=off".parse().unwrap())
-            .add_directive("ethers=off".parse().unwrap()),
-        _ => EnvFilter::default()
+            .add_directive("ethers=off".parse().unwrap())
+            .add_directive("zksync_storage=off".parse().unwrap())
+            .add_directive(default_level.into()),
+        Err(_) => EnvFilter::default()
             .add_directive(default_level.into())
             .add_directive("hyper=off".parse().unwrap())
             .add_directive("ethers=off".parse().unwrap())
@@ -60,7 +61,7 @@ fn start_logger(default_level: LevelFilter) {
 #[tokio::main]
 #[allow(clippy::too_many_lines)]
 async fn main() -> Result<()> {
-    start_logger(LevelFilter::DEBUG); //
+    start_logger(tracing_subscriber::filter::LevelFilter::INFO); //
 
     // check db-status folder exists or not, if not, create a new one
     let path = Path::new("./db-status");

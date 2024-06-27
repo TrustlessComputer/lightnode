@@ -219,7 +219,7 @@ pub struct Status {
 impl Status {
     // implement the function write_to_file
     pub fn write_to_file(&self, file_path: &str) -> Result<bool, Box<dyn std::error::Error>> {
-        tracing::info!("write to file: {}", file_path);
+        tracing::debug!("write to file: {}", file_path);
         let json_data = to_string_pretty(&self)?;
         let mut file = std::fs::OpenOptions::new()
                 .create(true)
