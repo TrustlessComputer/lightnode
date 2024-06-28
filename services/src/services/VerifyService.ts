@@ -28,7 +28,7 @@ export async function spawn(command: string) {
 
 export async function startVerifyService() {
   console.log(`[${new Date().toTimeString()}] Start verifying service ...`);
-  const cmd = 'cd ../ && cargo run -- reconstruct l1 --http-url https://rpc-amoy.polygon.technology/ --da-url https://rpc-amoy.polygon.technology/'
+  const cmd = 'cd ../ && ./target/release/state-reconstruct -- reconstruct l1 --http-url https://rpc-amoy.polygon.technology/ --da-url https://rpc-amoy.polygon.technology/'
   let isRunning = false;
 
   // Function to execute the command
