@@ -3,23 +3,23 @@ pub mod ethereum {
     pub const BLOCK_STEP: u64 = 50;
 
     /// Block number in Ethereum for zkSync genesis block.
-    pub const GENESIS_BLOCK: u64 = 1474940;
+    pub const GENESIS_BLOCK: u64 = 851270;
 
     /// Block number in Ethereum of the first Boojum-formatted block.
-    pub const BOOJUM_BLOCK: u64 = 1474940;
+    pub const BOOJUM_BLOCK: u64 = 851270;
 
     /// Block number in Ethereum of the first block storing pubdata within blobs.
-    pub const BLOB_BLOCK: u64 = 1474940;
+    pub const BLOB_BLOCK: u64 = 851270;
 
     /// zkSync smart contract address.
-    pub const ZK_SYNC_ADDR: &str = "0xD379CD1D5B25C861fAA5803a12ad7008c455fE37";
+    pub const ZK_SYNC_ADDR: &str = "0xcDCedf72CF801527408e8224c4D13E8b8161Fb42";
 
     /// Default Ethereum blob storage URL base.
     pub const BLOBS_URL: &str = "http://localhost:8555";
 
-    pub const DA_URL: &str = "https://rpc-amoy.polygon.technology/";
+    pub const DA_URL: &str = "https://polygon-bor-rpc.publicnode.com";
 
-    pub const HTTP_URL: &str = "https://rpc-amoy.polygon.technology/";
+    pub const HTTP_URL: &str = "https://polygon-bor-rpc.publicnode.com";
 
     pub const NUM_CONFIRMATIONS: u64 = 1;
 
@@ -27,9 +27,7 @@ pub mod ethereum {
 }
 
 pub mod l3 {
-    pub const CONTRACT_ADDRESSES: [&str; 2] = [
-        "0xa62c563362584d4d92d2604b642bffae716fcdef",
-        "0xd3ef043bf47d44a57ee34c9b04ec57d04a515d6a"
+    pub const CONTRACT_ADDRESSES: [&str; 0] = [
     ];
 
     pub const SLOT_ID_START: &str = "0xe16da923a2d88192e5070f37b4571d58682c0d66212ec634d495f33de3f77ab5";
@@ -37,9 +35,9 @@ pub mod l3 {
 }
 
 pub mod btc {
-    pub const BTC_SIGNER_ADDR: &str = "146SnNvfC7WvNgGN5XyUGUEsiwNZefJen7";
+    pub const BTC_SIGNER_ADDR: &str = "1753tN4MYRSE8DShysC4ikiJmJPEyo2qR3";
 
-    pub const BTC_RPC_ENDPOINT: &str = "http://34.142.169.143:18443/";
+    pub const BTC_RPC_ENDPOINT: &str = "https://late-yolo-violet.btc.quiknode.pro/2ad10036403de6d16f7ec09a649759f1f0de59f6/";
 
     pub const BTC_RPC_USERNAME: &str = "trustless";
 
@@ -47,7 +45,7 @@ pub mod btc {
 
     pub const SIGNATURE_LENGTH: usize = 65;
 
-    pub const CHECKPOINT_BLOCK_NUMBERS: [u64; 1] = [1474944]; 
+    pub const CHECKPOINT_BLOCK_NUMBERS: [u64; 0] = []; 
 }
 
 pub mod storage {
