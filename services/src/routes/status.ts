@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { parse } from 'path';
 
 const router = Router();
 
@@ -42,7 +43,7 @@ async function UpdateStatus() {
             const data = fs.readFileSync(path.join(dir, files[i]), 'utf8');
             // map data to object Status
             let status: Status = JSON.parse(data);
-            status.batch_data = "";
+            status.base_batch_number = parseInt(status.base_batch_number as unknown as string);
             statusCache.statuses.push(status);
             statusCache.lastest_batch_number += 1;
         }
@@ -69,4 +70,16 @@ router.get('/status/:page/:per_page', (req: Request, res: Response) => {
     res.json({ page, per_page, total, total_pages, data });
 });
 
+
+// Define the /status/:batch_number route
+router.get('/status/:batch_number', (req: Request, res: Response) => {
+    UpdateStatus();
+    const batch_number = parseInt(req.params.batch_number as string);
+    const status = statusCache.statuses.find(status => status.base_batch_number === batch_number);
+    if (status) {
+        res.json(status);
+    } else {
+        res.status(404).json({ error: 'Batch not found' });
+    }
+});
 export default router;

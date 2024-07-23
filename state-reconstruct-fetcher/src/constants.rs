@@ -27,8 +27,9 @@ pub mod ethereum {
 }
 
 pub mod l3 {
-    pub const CONTRACT_ADDRESSES: [&str; 1] = [
-        "0xE369C9FA45DDFD44dFaf737EbCe483e8c0D2E402",
+    pub const CONTRACT_ADDRESSES: [&str; 2] = [
+        "0xa62c563362584d4d92d2604b642bffae716fcdef",
+        "0xd3ef043bf47d44a57ee34c9b04ec57d04a515d6a"
     ];
 
     pub const SLOT_ID_START: &str = "0xe16da923a2d88192e5070f37b4571d58682c0d66212ec634d495f33de3f77ab5";
