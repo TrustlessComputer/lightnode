@@ -19,7 +19,7 @@ pub mod ethereum {
 
     pub const DA_URL: &str = "https://polygon-bor-rpc.publicnode.com";
 
-    pub const HTTP_URL: &str = "https://polygon-bor-rpc.publicnode.com";
+    pub const HTTP_URL: &str = "https://rpc-amoy.polygon.technology/";
 
     pub const NUM_CONFIRMATIONS: u64 = 1;
 
@@ -35,9 +35,9 @@ pub mod l3 {
 }
 
 pub mod btc {
-    pub const BTC_SIGNER_ADDR: &str = "1753tN4MYRSE8DShysC4ikiJmJPEyo2qR3";
+    pub const BTC_SIGNER_ADDR: &str = "1Cn95n6umSTzD3u4H5xw7nXxLH2SS3uE7D";
 
-    pub const BTC_RPC_ENDPOINT: &str = "https://late-yolo-violet.btc.quiknode.pro/2ad10036403de6d16f7ec09a649759f1f0de59f6/";
+    pub const BTC_RPC_ENDPOINT: &str = "https://late-yolo-violet.btc.quiknode.pro";
 
     pub const BTC_RPC_USERNAME: &str = "trustless";
 

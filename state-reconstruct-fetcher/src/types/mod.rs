@@ -213,7 +213,8 @@ pub struct Status {
     pub base_batch_number: String,
     pub bitcoin_tx_hash: String,
     pub da_tx_hash: String,
-    pub batch_data: String
+    pub batch_data: String,
+    pub bitcoin_da_tx_hash: String
 }
 
 impl Status {

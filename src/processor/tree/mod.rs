@@ -111,7 +111,8 @@ impl Processor for TreeProcessor {
                         base_batch_number: "0".to_string(),
                         bitcoin_tx_hash: "0".to_string(),
                         da_tx_hash: "0".to_string(),
-                        batch_data: "0".to_string()
+                        batch_data: "0".to_string(),
+                        bitcoin_da_tx_hash: "0".to_string()
                     }
                 }
             };

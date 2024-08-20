@@ -1,5 +1,5 @@
-use std::{cmp, fs::File, future::Future, ops::Deref, str::FromStr, sync::Arc};
-
+use std::{cmp, convert, fs::File, future::Future, ops::Deref, str::FromStr, sync::Arc};
+use bitcoincore_rpc::bitcoin::{self, secp256k1};
 use ethers::{
     abi::{Contract, Function, Token},
     prelude::*,
@@ -7,30 +7,30 @@ use ethers::{
 };
 use eyre::Result;
 use rand::random;
+use reqwest::Client;
+use serde::{Deserialize, Serialize};
 use state_reconstruct_storage::reconstruction::ReconstructionDatabase;
+use std::error::Error;
 use thiserror::Error;
 use tokio::{
     sync::{mpsc, Mutex},
     time::{sleep, Duration, Instant},
 };
+
 use tokio_util::sync::CancellationToken;
 
 use crate::{
     blob_http_client::BlobHttpClient,
     constants::{
+        btc::{BTC_RPC_ENDPOINT, BTC_SIGNER_ADDR, CHECKPOINT_BLOCK_NUMBERS, SIGNATURE_LENGTH},
         ethereum::{
-            BOOJUM_BLOCK, GENESIS_BLOCK, NUM_CONFIRMATIONS,
-            VERIFY_HELPER_ADDR, ZK_SYNC_ADDR, 
-        },
-        btc::{
-            BTC_RPC_ENDPOINT, BTC_SIGNER_ADDR, BTC_RPC_USERNAME, BTC_RPC_PASSWORD, SIGNATURE_LENGTH, CHECKPOINT_BLOCK_NUMBERS,
+            BOOJUM_BLOCK, GENESIS_BLOCK, NUM_CONFIRMATIONS, VERIFY_HELPER_ADDR, ZK_SYNC_ADDR,
         },
     },
+    decode::decode_flatten,
     metrics::L1Metrics,
     types::{CommitBlock, ParseError, Status},
-    decode::decode_flatten,
 };
-use bitcoincore_rpc::{bitcoin::{self, secp256k1}, Auth, Client, RpcApi};
 
 /// `MAX_RETRIES` is the maximum number of retries on failed L1 call.
 const MAX_RETRIES: u8 = 5;
@@ -50,6 +50,63 @@ pub enum L1FetchError {
 
     #[error("get end block number failed")]
     GetEndBlockNumber,
+}
+
+#[derive(Serialize)]
+struct RpcRequest<'a> {
+    jsonrpc: &'a str,
+    id: &'a str,
+    method: &'a str,
+    params: Vec<serde_json::Value>,
+}
+
+#[derive(Deserialize)]
+struct RpcResponse<T> {
+    result: T,
+}
+
+async fn call_rpc<T: for<'de> Deserialize<'de>>(
+    url: &str,
+    method: &str,
+    params: Vec<serde_json::Value>,
+) -> Result<T, Box<dyn Error>> {
+    let client = Client::new();
+    let request_body = RpcRequest {
+        jsonrpc: "1.0",
+        id: "curltest",
+        method,
+        params,
+    };
+    let response = client
+        .post(url)
+        .json(&request_body)
+        .send()
+        .await?
+        .json::<RpcResponse<T>>()
+        .await?;
+
+    Ok(response.result)
+}
+
+async fn get_block_hash(url: &str, block_height: u64) -> Result<String, Box<dyn Error>> {
+    let method = "getblockhash";
+    let params = vec![serde_json::json!(block_height)];
+
+    let block_hash: String = call_rpc(url, method, params).await?;
+    Ok(block_hash)
+}
+
+async fn get_block(url: &str, block_hash: &str) -> Result<serde_json::Value, Box<dyn Error>> {
+    let method = "getblock";
+    // add verbosity = 2 into param
+    let params = vec![serde_json::json!(block_hash), serde_json::json!(2)];
+    let block: serde_json::Value = call_rpc(url, method, params).await?;
+    Ok(block)
+}
+
+async fn get_block_count(url: &str) -> Result<u64, Box<dyn Error>> {
+    let block_count: u64 = call_rpc(url, "getblockcount", vec![]).await?;
+    Ok(block_count)
 }
 
 pub struct L1FetcherOptions {
@@ -103,7 +160,7 @@ struct Contracts {
 struct FullBlock {
     raw_data: Vec<u8>,
     block_number: u64,
-    txid: bitcoin::Txid,
+    txid: String,
 }
 
 pub struct L1Fetcher {
@@ -262,7 +319,7 @@ impl L1Fetcher {
                 last_fetched_l1_block_num = block_num;
             }
 
-            let mut metrics = self.metrics.lock().await;
+            let mut metrics: tokio::sync::MutexGuard<L1Metrics> = self.metrics.lock().await;
             metrics.latest_l1_block_num = last_fetched_l1_block_num;
             metrics.print();
         } else {
@@ -290,13 +347,12 @@ impl L1Fetcher {
         let block_step = self.config.block_step;
 
         let url = BTC_RPC_ENDPOINT;
-
-        let rpc = Client::new(&url, Auth::UserPass(BTC_RPC_USERNAME.to_owned(), BTC_RPC_PASSWORD.to_owned())).unwrap();
         let mut current_block_height = current_l1_block_number.as_u64();
 
         Ok(tokio::spawn({
             async move {
-                let mut target_end_block = rpc.get_block_count().unwrap() - 1 - NUM_CONFIRMATIONS;
+                let block_count: u64 = get_block_count(url).await.unwrap();
+                let mut target_end_block = block_count - NUM_CONFIRMATIONS;
                 if let Some(end_block_limit) = max_end_block {
                     if target_end_block > end_block_limit.as_u64() {
                         target_end_block = end_block_limit.as_u64();
@@ -309,8 +365,10 @@ impl L1Fetcher {
                 let mut batch_count = 0;
                 loop {
                     if current_checkpoint_index < checkpoint_block_numbers.len() {
-                        if current_block_height < checkpoint_block_numbers[current_checkpoint_index] {
-                            current_block_height = checkpoint_block_numbers[current_checkpoint_index];
+                        if current_block_height < checkpoint_block_numbers[current_checkpoint_index]
+                        {
+                            current_block_height =
+                                checkpoint_block_numbers[current_checkpoint_index];
                         } else {
                             current_checkpoint_index += 1;
                             continue;
@@ -322,57 +380,68 @@ impl L1Fetcher {
                             break current_block_height;
                         }
                     }
+                    metrics.lock().await.latest_l1_block_num = current_block_height;
+                    let block_hash = get_block_hash(url, current_block_height).await.unwrap();
+                    let best_block_hash_by_height: String = block_hash;
 
-                    let best_block_hash_by_height =
-                        rpc.get_block_hash(current_block_height).unwrap();
+                    let block_details = get_block(url, &best_block_hash_by_height).await.unwrap();
+                    let txs = block_details["tx"].as_array().unwrap();
+                    tracing::debug!("block #{}, txs count: {}", current_block_height, txs.len());
 
-                    let blk;
-                    match rpc.get_block(&best_block_hash_by_height) {
-                        Ok(b) => blk = b,
-                        Err(e) => {
-                            tracing::warn!("Cannot get block: {}", current_block_height);
-                            continue;
-                        }
+                    // revert txs if block number is 851286
+                    let new_txs: Vec<_>; // Declare new_txs without initializing
+
+                    if current_block_height == 851781 {
+                        new_txs = txs.clone(); // Clone the original vector
+                    } else {
+                        new_txs = txs.iter().rev().cloned().collect();
                     }
-
-                    for tx in blk.txdata {
+                    for tx in new_txs {
                         // get the raw witness of each input
-                        for input in &tx.input {
-                            let witness = &input.witness;
-                            let wv = &witness.to_vec();
-                            if wv.len() < 2 {
-                                // tracing::debug!("block height {} witness length not matched, skipping", current_block_height);
+                        for input in tx["vin"].as_array().unwrap() {
+                            if !input["txinwitness"].is_array() {
                                 continue;
                             }
+                            let witness = input["txinwitness"].as_array().unwrap();
+                            if witness.len() < 2 {
+                                continue;
+                            }
+                            let content = witness[1].as_str().unwrap();
+                            // convert content from hex string to bytes array
+                            let content = hex::decode(content).unwrap();
 
-                            let content = &witness.to_vec()[1];
                             if content.len() < 70 {
-                                tracing::debug!("block height {} witness content length not matched, skipping", current_block_height);
                                 continue;
                             }
-
                             let content = &content[66..content.len() - 1];
                             let buf = content.to_vec();
-                            let content;
+                            let content: Vec<u8>;
                             match decode_flatten(buf) {
                                 Some(c) => content = c,
                                 None => {
-                                    tracing::debug!("witness encoding format does not match, skipping");
                                     continue;
                                 }
                             }
-
                             let mut index = 0;
-                            for i in 0..content.len() {
-                                if content[i] == 0 && content[i + 1] == 0 && content[i + 2] == 0 && content[i + 3] == 0 && content[i + 4] == 0 && content[i + 5] == 0 && content[i + 6] == 0 && content[i + 7] == 0 && content[i + 8] == 8 {
-                                    index = i+8;
+                            if content.len() < 8 {
+                                continue;
+                            }
+                            for i in 0..content.len() - 8 {
+                                if content[i] == 0
+                                    && content[i + 1] == 0
+                                    && content[i + 2] == 0
+                                    && content[i + 3] == 0
+                                    && content[i + 4] == 0
+                                    && content[i + 5] == 0
+                                    && content[i + 6] == 0
+                                    && content[i + 7] == 0
+                                    && content[i + 8] == 8
+                                {
+                                    index = i + 8;
                                     break;
                                 }
                             }
-                            let content = &content[index..];
-                            
-                            let content1 = content.clone();
-                            tracing::debug!("content {:?}", hex::encode(content1));
+                            let content: &[u8] = &content[index..];
 
                             // filter by id
                             let first_byte = content[0];
@@ -380,52 +449,83 @@ impl L1Fetcher {
                                 tracing::debug!("witness type does not match, skipping");
                                 continue;
                             }
-
-                            // check signature
                             let rawsig = &content[1..1 + SIGNATURE_LENGTH];
                             let signed_msg = hex::encode(&content[1 + SIGNATURE_LENGTH..]);
                             let msg_hash = bitcoin::sign_message::signed_msg_hash(&signed_msg);
-                            let sig = bitcoin::sign_message::MessageSignature::from_slice(&rawsig).unwrap();
-                            let secp = secp256k1::Secp256k1::new();
-                            tracing::info!("Message hash {:?} with signature {:?}", hex::encode(msg_hash), hex::encode(rawsig));
-                            let signature_valid = match sig.is_signed_by_address(&secp, &bitcoin::Address::from_str(BTC_SIGNER_ADDR).unwrap().assume_checked(), msg_hash) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    tracing::error!("signature error: {e}");
-                                    false
-                                },
-                            };
 
-                            if !signature_valid {
-                                let content = &content[1 + SIGNATURE_LENGTH..];
-                                let commit_data = &content[..1636];
-                                let prove_data = &content[1636..3784];
-                                let execute_data = &content[3784..content.len()];
-                                tracing::debug!("commit: {:?}", hex::encode(commit_data));
-                                tracing::debug!("prove data: {:?}", hex::encode(prove_data));
-                                tracing::debug!("execute: {:?}", hex::encode(execute_data));
-                                tracing::debug!("invalid signature, skipping");
-                                continue;
-                            } 
+                            match bitcoin::sign_message::MessageSignature::from_slice(&rawsig) {
+                                Ok(sig) => {
+                                    // Use `sig` here
+                                    tracing::debug!(
+                                        "Successfully created MessageSignature: {:?}",
+                                        sig
+                                    );
+                                    let secp = secp256k1::Secp256k1::new();
+                                    tracing::info!(
+                                        "Message hash {:?} with signature {:?} in tx id {:?}",
+                                        hex::encode(msg_hash),
+                                        hex::encode(rawsig),
+                                        tx["txid"].as_str().unwrap()
+                                    );
+                                    let signature_valid = match sig.is_signed_by_address(
+                                        &secp,
+                                        &bitcoin::Address::from_str(BTC_SIGNER_ADDR)
+                                            .unwrap()
+                                            .assume_checked(),
+                                        msg_hash,
+                                    ) {
+                                        Ok(res) => res,
+                                        Err(e) => {
+                                            tracing::error!("signature error: {e}");
+                                            false
+                                        }
+                                    };
+                                    if !signature_valid {
+                                        let content = &content[1 + SIGNATURE_LENGTH..];
+                                        let commit_data = &content[..1636];
+                                        let prove_data = &content[1636..3784];
+                                        let execute_data = &content[3784..content.len()];
+                                        tracing::debug!("commit: {:?}", hex::encode(commit_data));
+                                        tracing::debug!(
+                                            "prove data: {:?}",
+                                            hex::encode(prove_data)
+                                        );
+                                        tracing::debug!("execute: {:?}", hex::encode(execute_data));
+                                        tracing::debug!("invalid signature, skipping");
+                                        continue;
+                                    }
+                                }
+                                Err(e) => {
+                                    tracing::debug!("Failed to create MessageSignature: {}", e);
+                                    // Continue to the next iteration
+                                    continue;
+                                }
+                            }
 
                             let content = &content[1 + SIGNATURE_LENGTH..];
 
-                            if let Err(e) = raw_block_tx.send(FullBlock {
-                                raw_data: content.to_vec(),
-                                block_number: current_block_height,
-                                txid: tx.txid(),
-                            }).await {
+                            if let Err(e) = raw_block_tx
+                                .send(FullBlock {
+                                    raw_data: content.to_vec(),
+                                    block_number: current_block_height,
+                                    txid: tx["txid"].as_str().unwrap().to_string(),
+                                })
+                                .await
+                            {
                                 if cancellation_token.is_cancelled() {
                                     tracing::debug!("Shutting down tx sender...");
                                 } else {
                                     tracing::error!("Cannot send tx hash: {e}");
                                     cancellation_token.cancel();
                                 }
-
                                 return current_block_height;
                             } else {
                                 batch_count += 1;
-                                tracing::debug!("block #{}, batch #{} tx rawdata sent", current_block_height, batch_count);
+                                tracing::debug!(
+                                    "block #{}, batch #{} tx rawdata sent",
+                                    current_block_height,
+                                    batch_count
+                                );
                             }
                         }
                     }
@@ -692,7 +792,12 @@ impl L1Fetcher {
                 let mut last_block_number_processed = None;
                 tracing::debug!("waiting for raw tx data");
 
-                while let Some(FullBlock { raw_data: content, block_number , txid}) = raw_block_rx.recv().await {
+                while let Some(FullBlock {
+                    raw_data: content,
+                    block_number,
+                    txid,
+                }) = raw_block_rx.recv().await
+                {
                     if cancellation_token.is_cancelled() {
                         tracing::debug!("Shutting down parsing handler...");
                         return last_block_number_processed;
@@ -700,10 +805,12 @@ impl L1Fetcher {
 
                     let commit_data = &content[..1636];
                     let prove_data = &content[1636..3784];
-                    let execute_data = &content[3784..content.len()];
+                    let execute_data = &content[3784..content.len()-32];
+                    let btc_da_tx_hash = &content[content.len()-32..];
                     tracing::debug!("commit: {:?}", hex::encode(commit_data));
                     tracing::debug!("prove data: {:?}", hex::encode(prove_data));
                     tracing::debug!("execute: {:?}", hex::encode(execute_data));
+                    tracing::debug!("bitcoin da tx hash: {:?}", hex::encode(btc_da_tx_hash));
 
                     // verify proof by calling contract
                     let contract_address = VERIFY_HELPER_ADDR;
@@ -713,15 +820,16 @@ impl L1Fetcher {
 
                     let proof_valid = match provider
                         .call(&TypedTransaction::Legacy(contract_call_tx), None)
-                        .await {
+                        .await
+                    {
                         Ok(result) => {
                             let verify_result_str = hex::encode(result);
                             verify_result_str == "0000000000000000000000000000000000000000000000000000000000000001"
-                        },
+                        }
                         Err(e) => {
                             tracing::error!("contract call error: {e}");
                             false
-                        },
+                        }
                     };
 
                     if !proof_valid {
@@ -732,7 +840,9 @@ impl L1Fetcher {
                     tracing::info!("Verify proof succeeded!!!");
 
                     let blocks = loop {
-                        match parse_calldata(block_number, &commit_fn, commit_data, &client, &dap).await {
+                        match parse_calldata(block_number, &commit_fn, commit_data, &client, &dap)
+                            .await
+                        {
                             Ok(blks) => break blks,
                             Err(e) => match e {
                                 ParseError::BlobStorageError(_) => {
@@ -770,34 +880,37 @@ impl L1Fetcher {
                             return last_block_number_processed;
                         } else {
                             tracing::debug!("commit block sent");
-                            tracing::debug!("DEBUG Base Block number {:?}", metrics.latest_l2_block_num);
+                            tracing::debug!(
+                                "DEBUG Base Block number {:?}",
+                                metrics.latest_l2_block_num
+                            );
                             tracing::debug!("DEBUG Bitcoin txid {:?}", txid);
-                            
+
                             let da_txhash = match get_da_txhash(&commit_fn, commit_data).await {
-                                Ok(da_txhash) => {
-                                    da_txhash
-                                },
+                                Ok(da_txhash) => da_txhash,
                                 Err(e) => {
                                     tracing::error!("Cannot get DA txhash: {e}");
                                     cancellation_token.cancel();
                                     return last_block_number_processed;
                                 }
                             };
-                            
+
                             //  write info of block to file with json format
                             //  new object Status with batch_data is empty
                             let status = Status {
                                 base_batch_number: metrics.latest_l2_block_num.to_string(),
                                 bitcoin_tx_hash: txid.to_string(),
                                 da_tx_hash: format!("{:?}", da_txhash),
+                                bitcoin_da_tx_hash: hex::encode(btc_da_tx_hash),
                                 batch_data: String::new(),
                             };
-                            
+
                             {
-                                let file_path = format!("./db-status/{}.json", metrics.latest_l2_block_num);
+                                let file_path =
+                                    format!("./db-status/{}.json", metrics.latest_l2_block_num);
                                 let file_path_str = &file_path;
                                 let write_status = status.write_to_file(file_path_str).unwrap();
-                            
+
                                 if write_status {
                                     tracing::debug!("Status file written");
                                 } else {
@@ -947,7 +1060,10 @@ pub async fn parse_proof_calldata(
     Ok(raw_proof)
 }
 
-pub async fn get_da_txhash(commit_blocks_fn: &Function, calldata: &[u8]) -> Result<H256, ParseError> {
+pub async fn get_da_txhash(
+    commit_blocks_fn: &Function,
+    calldata: &[u8],
+) -> Result<H256, ParseError> {
     let mut parsed_input = commit_blocks_fn
         .decode_input(&calldata[4..])
         .map_err(|e| ParseError::InvalidCalldata(e.to_string()))?;

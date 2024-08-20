@@ -28,3 +28,4 @@ jsonrpc = { version = "0.18.0", features = ["minreq_http"] }
 minreq = { version = "2.11.2", features = ["https"] }
 bitcoincore-rpc = { version = "0.18.0" }
 anyhow = "1.0.83"
+jsonrpsee = "0.13"

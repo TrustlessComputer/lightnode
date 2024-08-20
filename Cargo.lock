@@ -3055,6 +3055,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "jsonrpsee"
+version = "0.13.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a1f2ab5a60e558e74ea93bcf5164ebc47939a7fff8938fa9b5233bbc63e16061"
+
+[[package]]
 name = "jsonwebtoken"
 version = "8.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5577,6 +5583,7 @@ dependencies = [
  "hex",
  "indexmap 2.2.6",
  "jsonrpc 0.18.0",
+ "jsonrpsee",
  "minreq",
  "rand 0.8.5",
  "reqwest",
