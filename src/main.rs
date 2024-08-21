@@ -90,7 +90,7 @@ async fn main() -> Result<()> {
 
             match source {
                 ReconstructSource::L1 { l1_fetcher_options } => {
-                    let fetcher_options = l1_fetcher_options.into();
+                    let fetcher_options: L1FetcherOptions = l1_fetcher_options.into();
                     let processor = TreeProcessor::new(db_path.clone()).await?;
                     let fetcher = L1Fetcher::new(fetcher_options, Some(processor.get_inner_db()))?;
                     let (tx, rx) = mpsc::channel::<CommitBlock>(5);

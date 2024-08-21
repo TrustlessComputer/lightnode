@@ -5,11 +5,11 @@ use state_reconstruct_fetcher::{
 
 use crate::processor::snapshot;
 
-#[derive(Args)]
+#[derive(Args, Debug)]
 pub struct L1FetcherOptions {
     /// The Ethereum JSON-RPC HTTP URL to use.
     #[arg(long)]
-    pub http_url: String,
+    pub btc_url: String,
     #[arg(long)]
     pub da_url: String,
     /// The Ethereum blob storage URL base.
@@ -33,7 +33,7 @@ pub struct L1FetcherOptions {
 impl From<L1FetcherOptions> for FetcherOptions {
     fn from(opt: L1FetcherOptions) -> Self {
         FetcherOptions {
-            http_url: opt.http_url,
+            btc_url: opt.btc_url,
             da_url: opt.da_url,
             blobs_url: opt.blobs_url,
             start_block: opt.start_block,

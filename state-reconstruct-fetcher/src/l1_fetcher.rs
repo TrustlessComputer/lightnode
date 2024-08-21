@@ -24,8 +24,9 @@ use crate::{
     constants::{
         btc::{BTC_RPC_ENDPOINT, BTC_SIGNER_ADDR, CHECKPOINT_BLOCK_NUMBERS, SIGNATURE_LENGTH, BTC_DA_CHECKPOINT_BLOCK_NUMBERS},
         ethereum::{
-            BOOJUM_BLOCK, GENESIS_BLOCK, NUM_CONFIRMATIONS, VERIFY_HELPER_ADDR, ZK_SYNC_ADDR,
+            BOOJUM_BLOCK, GENESIS_BLOCK, NUM_CONFIRMATIONS, VERIFY_HELPER_ADDR, ZK_SYNC_ADDR, HTTP_URL, 
         },
+
     },
     decode::decode_flatten,
     metrics::L1Metrics,
@@ -111,7 +112,7 @@ async fn get_block_count(url: &str) -> Result<u64, Box<dyn Error>> {
 
 pub struct L1FetcherOptions {
     /// The Ethereum JSON-RPC HTTP URL to use.
-    pub http_url: String,
+    pub btc_url: String,
     pub da_url: String,
     /// The Ethereum blob storage URL base.
     pub blobs_url: String,
@@ -177,7 +178,7 @@ impl L1Fetcher {
         config: L1FetcherOptions,
         inner_db: Option<Arc<Mutex<ReconstructionDatabase>>>,
     ) -> Result<Self> {
-        let provider = Provider::<Http>::try_from(&config.http_url)
+        let provider = Provider::<Http>::try_from(HTTP_URL)
             .expect("could not instantiate HTTP Provider");
         let daprovider =
             Provider::<Http>::try_from(&config.da_url).expect("could not instantiate DAProvider");
@@ -346,12 +347,12 @@ impl L1Fetcher {
         let provider_clone = self.provider.clone();
         let block_step = self.config.block_step;
 
-        let url = BTC_RPC_ENDPOINT;
+        let url = self.config.btc_url.clone();
         let mut current_block_height = current_l1_block_number.as_u64();
 
         Ok(tokio::spawn({
             async move {
-                let block_count: u64 = get_block_count(url).await.unwrap();
+                let block_count: u64 = get_block_count(&url).await.unwrap();
                 let mut target_end_block = block_count - NUM_CONFIRMATIONS;
                 if let Some(end_block_limit) = max_end_block {
                     if target_end_block > end_block_limit.as_u64() {
@@ -381,10 +382,10 @@ impl L1Fetcher {
                         }
                     }
                     metrics.lock().await.latest_l1_block_num = current_block_height;
-                    let block_hash = get_block_hash(url, current_block_height).await.unwrap();
+                    let block_hash = get_block_hash(&url, current_block_height).await.unwrap();
                     let best_block_hash_by_height: String = block_hash;
 
-                    let block_details = get_block(url, &best_block_hash_by_height).await.unwrap();
+                    let block_details = get_block(&url, &best_block_hash_by_height).await.unwrap();
                     let txs = block_details["tx"].as_array().unwrap();
                     tracing::debug!("block #{}, txs count: {}", current_block_height, txs.len());
 
