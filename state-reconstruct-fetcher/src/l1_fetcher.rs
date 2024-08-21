@@ -22,7 +22,7 @@ use tokio_util::sync::CancellationToken;
 use crate::{
     blob_http_client::BlobHttpClient,
     constants::{
-        btc::{BTC_RPC_ENDPOINT, BTC_SIGNER_ADDR, CHECKPOINT_BLOCK_NUMBERS, SIGNATURE_LENGTH},
+        btc::{BTC_RPC_ENDPOINT, BTC_SIGNER_ADDR, CHECKPOINT_BLOCK_NUMBERS, SIGNATURE_LENGTH, BTC_DA_CHECKPOINT_BLOCK_NUMBERS},
         ethereum::{
             BOOJUM_BLOCK, GENESIS_BLOCK, NUM_CONFIRMATIONS, VERIFY_HELPER_ADDR, ZK_SYNC_ADDR,
         },
@@ -806,11 +806,15 @@ impl L1Fetcher {
                     let commit_data = &content[..1636];
                     let prove_data = &content[1636..3784];
                     let execute_data = &content[3784..content.len()-32];
-                    let btc_da_tx_hash = &content[content.len()-32..];
+                    let mut btc_da_tx_hash = &content[content.len()-32..];
+                    tracing::debug!("block number: {:?}", block_number);
+                    if block_number < BTC_DA_CHECKPOINT_BLOCK_NUMBERS {
+                        btc_da_tx_hash = &[];
+                    }
                     tracing::debug!("commit: {:?}", hex::encode(commit_data));
                     tracing::debug!("prove data: {:?}", hex::encode(prove_data));
                     tracing::debug!("execute: {:?}", hex::encode(execute_data));
-                    tracing::debug!("bitcoin da tx hash: {:?}", hex::encode(btc_da_tx_hash));
+                    
 
                     // verify proof by calling contract
                     let contract_address = VERIFY_HELPER_ADDR;
@@ -1188,6 +1192,7 @@ async fn parse_commit_block_info(
         let raw = CommitBlock::get_pubdata_from_token_resolve(&data[0]).await?;
         // turn into H256
         let hash = H256::from_slice(&raw);
+        tracing::debug!("DEBUG tx da hash: {:?}", hash);
         let tx = match dap.get_transaction(hash).await {
             Ok(res) => match res {
                 Some(tx) => tx,

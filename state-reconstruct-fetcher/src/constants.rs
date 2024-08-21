@@ -37,7 +37,7 @@ pub mod l3 {
 pub mod btc {
     pub const BTC_SIGNER_ADDR: &str = "1Cn95n6umSTzD3u4H5xw7nXxLH2SS3uE7D";
 
-    pub const BTC_RPC_ENDPOINT: &str = "https://late-yolo-violet.btc.quiknode.pro";
+    pub const BTC_RPC_ENDPOINT: &str = "";
 
     pub const BTC_RPC_USERNAME: &str = "trustless";
 
@@ -46,6 +46,8 @@ pub mod btc {
     pub const SIGNATURE_LENGTH: usize = 65;
 
     pub const CHECKPOINT_BLOCK_NUMBERS: [u64; 0] = []; 
+
+    pub const BTC_DA_CHECKPOINT_BLOCK_NUMBERS: u64 = 857436;
 }
 
 pub mod storage {
